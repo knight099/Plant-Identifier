@@ -149,7 +149,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row gap-6 mt-8 w-full items-start">
               {/* Plant Info with Image */}
               <div className="flex-1">
-                <PlantInfo info={{ ...plantInfo, image }} />
+                <PlantInfo info={{ ...plantInfo, image: image || undefined }} />
               </div>
 
               {/* Chat Interface */}
