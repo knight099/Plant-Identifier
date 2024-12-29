@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Camera, Upload, RotateCcw } from 'lucide-react';
 import PlantInfo from '@/components/PlantInfo';
 import ChatInterface from '@/components/ChatInterface';
@@ -19,7 +19,6 @@ export default function Home() {
   const [isUsingFrontCamera, setIsUsingFrontCamera] = useState(false); // Camera toggle state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-
 
   const handleImageUpload = async (file: File) => {
     try {
@@ -43,8 +42,7 @@ export default function Home() {
     }
   };
 
-
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: isUsingFrontCamera ? 'user' : 'environment' },
@@ -56,17 +54,23 @@ export default function Home() {
     } catch (err) {
       console.error('Error accessing camera:', err);
     }
+  }, [isUsingFrontCamera]);
+
+  const stopCamera = () => {
+    const stream = videoRef.current?.srcObject as MediaStream;
+    stream?.getTracks().forEach((track) => track.stop());
   };
 
-  const toggleCamera = async () => {
+  const toggleCamera = () => {
     setIsUsingFrontCamera((prev) => !prev);
-    // Restart the camera with the new facing mode
+  };
+
+  useEffect(() => {
     if (showCamera) {
-      const stream = videoRef.current?.srcObject as MediaStream;
-      stream?.getTracks().forEach((track) => track.stop());
+      stopCamera();
       startCamera();
     }
-  };
+  }, [isUsingFrontCamera, showCamera, startCamera]); // Restart camera when state changes
 
   const captureImage = async () => {
     if (videoRef.current) {
@@ -87,8 +91,7 @@ export default function Home() {
         setPlantInfo(plantData);
 
         setShowCamera(false);
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream?.getTracks().forEach((track) => track.stop());
+        stopCamera();
       } catch (error) {
         console.error('Error capturing image:', error);
       } finally {
@@ -106,7 +109,6 @@ export default function Home() {
         </h1>
 
         <div className="flex flex-col items-center gap-8">
-          {/* Action Buttons */}
           <div className="flex gap-4">
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -133,7 +135,6 @@ export default function Home() {
             />
           </div>
 
-          {/* Camera View */}
           {showCamera && (
             <div className="relative">
               <video
@@ -151,7 +152,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={toggleCamera}
-                  className="px-4 py-2 bg-gray-800 text-white rounded-full shadow-md"
+                  className="px-4 py-2 bg-gray-800 text-white rounded-full shadow-md flex items-center gap-2"
                 >
                   <RotateCcw size={20} />
                   Switch
@@ -160,10 +161,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* Uploaded Image and Interfaces */}
           {!showCamera && plantInfo && (
             <div className="flex flex-col md:flex-row gap-6 mt-8 w-full items-start">
-              {/* Plant Info with Image */}
               <div className="flex-1">
                 <PlantInfo info={{ ...plantInfo, image: image || undefined }} />
               </div>
@@ -213,3 +212,5 @@ export default function Home() {
     </div>
   );
 }
+
+
