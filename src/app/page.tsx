@@ -121,7 +121,7 @@ export default function Home() {
     }
   };
 
-  const handleCardClick = (result: SearchResult) => {
+  const handleCardClick = (result: SearchResults) => {
     console.log('Clicked card:', result);
     setSelectedPlantInfo(result); // Set the selected plant info
     setInitialMessage(`You selected ${result.name}. How can I assist you with this plant?`);
