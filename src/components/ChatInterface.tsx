@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { getChatResponse } from '@/lib/gemini';
 
@@ -10,9 +10,15 @@ interface Message {
   content: string;
 }
 
-export default function ChatInterface({ plantInfo }: { plantInfo: any }) {
+export default function ChatInterface({ plantInfo, initialMessage }: { plantInfo: any }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+
+  useEffect(() => {
+    if (initialMessage) {
+      setMessages([{ text: initialMessage, sender: 'system' }]);
+    }
+  }, [initialMessage]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -33,6 +39,11 @@ export default function ChatInterface({ plantInfo }: { plantInfo: any }) {
     <div className="w-full max-w-xl bg-gradient-to-r from-green-200 via-white to-blue-200 dark:from-gray-700 dark:via-gray-800 dark:to-gray-900 rounded-2xl shadow-xl overflow-hidden">
       {/* Chat Window */}
       <div className="h-96 overflow-y-auto p-6 bg-white dark:bg-gray-800">
+        {messages.map((message, index) => (
+        <div key={index} className={`message ${message.sender}`}>
+          {message.text}
+        </div>
+      ))}
         {messages.length === 0 && (
           <p className="text-center text-gray-500 dark:text-gray-400">
             Start a conversation about your plant 🌱

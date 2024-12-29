@@ -127,3 +127,51 @@ export async function getChatResponse(message: string, plantInfo: any) {
     }
   }
 }
+
+// Add a function to search for plants based on user input
+export async function searchPlants(query: string) {
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: `Search for plants based on the following query and return a JSON response with relevant results:
+              {
+                "plants": [
+                  { "name": "plant name", "description": "short description", "image": "image URL" },
+                ]
+              }
+              Query: ${query}`
+            }
+          ]
+        }
+      ]
+    });
+
+    const response = await result.response;
+    const text = await response.text();
+
+    const cleanedText = text
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+    console.debug('Plant Data:', cleanedText);
+    if (isJSON(cleanedText)) {
+      return JSON.parse(cleanedText).plants || [];
+    } else {
+    console.warn('Response is not JSON. Returning as plain text.');
+    return {
+        name: 'Search Result',
+        description: cleanedText,
+        image: 'https://via.placeholder.com/400'
+      };
+    }
+  } catch (error) {
+    console.error('Error searching plants:', error);
+    return [];
+  }
+}

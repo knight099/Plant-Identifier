@@ -1,11 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-
+import Head from 'next/head';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Camera, Upload, RotateCcw } from 'lucide-react';
 import PlantInfo from '@/components/PlantInfo';
 import ChatInterface from '@/components/ChatInterface';
-import { identifyPlant } from '@/lib/gemini';
+import { identifyPlant, searchPlants } from '@/lib/gemini';
 import Navbar from '@/components/NavBar';
+import SearchBar from '@/components/SearchBar';
+import SearchResults from '@/components/SearchResult';
 
 export default function Home() {
   const [image, setImage] = useState<string | null>(null);
@@ -17,8 +20,26 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [isUsingFrontCamera, setIsUsingFrontCamera] = useState(false); // Camera toggle state
+  // const [searchResults, setSearchResults] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedPlantInfo, setSelectedPlantInfo] = useState<any>(null);
+  const [initialMessage, setInitialMessage] = useState<string>('');
+
+  const handleSearch = async (query: string) => {
+    setIsLoading(true);
+    try{
+      console.log('Searching for:', query);
+      const results = await searchPlants(query);
+      console.log('Search results:', results);
+      setSearchResults(results);
+    } catch (error) {
+    console.error('Error fetching search results:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleImageUpload = async (file: File) => {
     try {
@@ -56,10 +77,10 @@ export default function Home() {
     }
   }, [isUsingFrontCamera]);
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     const stream = videoRef.current?.srcObject as MediaStream;
     stream?.getTracks().forEach((track) => track.stop());
-  };
+  }, []);
 
   const toggleCamera = () => {
     setIsUsingFrontCamera((prev) => !prev);
@@ -70,7 +91,7 @@ export default function Home() {
       stopCamera();
       startCamera();
     }
-  }, [isUsingFrontCamera, showCamera, startCamera]); // Restart camera when state changes
+  }, [isUsingFrontCamera, showCamera, startCamera, stopCamera]); // Restart camera when state changes
 
   const captureImage = async () => {
     if (videoRef.current) {
@@ -100,7 +121,18 @@ export default function Home() {
     }
   };
 
+  const handleCardClick = (result: SearchResult) => {
+    console.log('Clicked card:', result);
+    setSelectedPlantInfo(result); // Set the selected plant info
+    setInitialMessage(`You selected ${result.name}. How can I assist you with this plant?`);
+  };
+
   return (
+    <div>
+    <Head>
+    <title>Plant AI Assistant</title>
+    <meta name="description" content="AI-powered assistant for plant care." />
+    </Head>
     <div className="relative min-h-screen bg-gradient-to-br from-green-300 via-blue-400 to-purple-600 animate-bg-gradient">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
@@ -134,6 +166,32 @@ export default function Home() {
               onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
             />
           </div>
+          {/* Search Bar */}
+        <div className="mb-8">
+          <SearchBar onSearch={handleSearch} />
+        </div>
+
+        {/* Search Results */}
+        {!selectedPlantInfo ? (
+        <>
+          {searchResults && searchResults.length > 0 ? (
+            <div className="mt-8">
+              <h2 className="text-2xl font-semibold text-center text-white mb-4">
+                Search Results
+              </h2>
+              {isLoading ? (
+                <p className="text-center text-gray-500">Loading results...</p>
+              ) : (
+                <SearchResults results={searchResults} onCardClick={handleCardClick}/>
+              )}
+            </div>
+          ) : (
+            <p className="text-center text-gray-500 mt-8">No search results to display.</p>
+          )}
+        </>
+        ) : (
+        <ChatInterface plantInfo={selectedPlantInfo} initialMessage={initialMessage} />
+        )}
 
           {showCamera && (
             <div className="relative">
@@ -209,6 +267,7 @@ export default function Home() {
           }
         }
       `}</style>
+    </div>
     </div>
   );
 }
