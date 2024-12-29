@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Camera, Upload } from 'lucide-react';
+import { Camera, Upload, RotateCcw } from 'lucide-react';
 import PlantInfo from '@/components/PlantInfo';
 import ChatInterface from '@/components/ChatInterface';
 import { identifyPlant } from '@/lib/gemini';
@@ -15,9 +15,11 @@ export default function Home() {
     careInstructions: string[];
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [isUsingFrontCamera, setIsUsingFrontCamera] = useState(false); // Camera toggle state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [showCamera, setShowCamera] = useState(false);
+
 
   const handleImageUpload = async (file: File) => {
     try {
@@ -41,15 +43,28 @@ export default function Home() {
     }
   };
 
+
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: isUsingFrontCamera ? 'user' : 'environment' },
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
       setShowCamera(true);
     } catch (err) {
       console.error('Error accessing camera:', err);
+    }
+  };
+
+  const toggleCamera = async () => {
+    setIsUsingFrontCamera((prev) => !prev);
+    // Restart the camera with the new facing mode
+    if (showCamera) {
+      const stream = videoRef.current?.srcObject as MediaStream;
+      stream?.getTracks().forEach((track) => track.stop());
+      startCamera();
     }
   };
 
@@ -118,14 +133,6 @@ export default function Home() {
             />
           </div>
 
-          {/* Loading Spinner */}
-          {isLoading && (
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-white"></div>
-              <p className="mt-3 text-gray-200">Analyzing image...</p>
-            </div>
-          )}
-
           {/* Camera View */}
           {showCamera && (
             <div className="relative">
@@ -134,13 +141,22 @@ export default function Home() {
                 autoPlay
                 className="rounded-lg max-w-xl w-full shadow-md"
               />
-              <button
-                onClick={captureImage}
-                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-2 bg-white text-black rounded-full shadow-md"
-                disabled={isLoading}
-              >
-                Capture
-              </button>
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4">
+                <button
+                  onClick={captureImage}
+                  className="px-6 py-2 bg-white text-black rounded-full shadow-md"
+                  disabled={isLoading}
+                >
+                  Capture
+                </button>
+                <button
+                  onClick={toggleCamera}
+                  className="px-4 py-2 bg-gray-800 text-white rounded-full shadow-md"
+                >
+                  <RotateCcw size={20} />
+                  Switch
+                </button>
+              </div>
             </div>
           )}
 
