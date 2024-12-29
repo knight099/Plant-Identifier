@@ -9,6 +9,7 @@ import { identifyPlant, searchPlants } from '@/lib/gemini';
 import Navbar from '@/components/NavBar';
 import SearchBar from '@/components/SearchBar';
 import SearchResults from '@/components/SearchResult';
+import { SearchResult } from '@/components/SearchResult';
 
 export default function Home() {
   const [image, setImage] = useState<string | null>(null);
@@ -121,7 +122,7 @@ export default function Home() {
     }
   };
 
-  const handleCardClick = (result: SearchResults) => {
+  const handleCardClick = (result: SearchResult) => {
     console.log('Clicked card:', result);
     setSelectedPlantInfo(result); // Set the selected plant info
     setInitialMessage(`You selected ${result.name}. How can I assist you with this plant?`);

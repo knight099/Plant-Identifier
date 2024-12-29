@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-interface SearchResult {
+export interface SearchResult {
   name: string;
   description: string;
   image: string;

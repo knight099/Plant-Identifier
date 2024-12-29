@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use client';
+// 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { getChatResponse } from '@/lib/gemini';
 
@@ -10,13 +10,19 @@ interface Message {
   content: string;
 }
 
-export default function ChatInterface({ plantInfo, initialMessage }: { plantInfo: any }) {
+interface ChatInterfaceProps {
+  plantInfo: any;
+  initialMessage?: string;
+}
+
+// export default function ChatInterface: React.FC<ChatInterfaceProps> = ({ plantInfo, initialMessage }) => {
+const  ChatInterface: React.FC<ChatInterfaceProps> = ({ plantInfo, initialMessage }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
 
   useEffect(() => {
     if (initialMessage) {
-      setMessages([{ text: initialMessage, sender: 'system' }]);
+      setMessages([{ content: initialMessage, role: 'assistant' }]);
     }
   }, [initialMessage]);
 
@@ -40,8 +46,8 @@ export default function ChatInterface({ plantInfo, initialMessage }: { plantInfo
       {/* Chat Window */}
       <div className="h-96 overflow-y-auto p-6 bg-white dark:bg-gray-800">
         {messages.map((message, index) => (
-        <div key={index} className={`message ${message.sender}`}>
-          {message.text}
+        <div key={index} className={`message ${message.role}`}>
+          {message.content}
         </div>
       ))}
         {messages.length === 0 && (
@@ -91,3 +97,5 @@ export default function ChatInterface({ plantInfo, initialMessage }: { plantInfo
     </div>
   );
 }
+
+export default ChatInterface;
