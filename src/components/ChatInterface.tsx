@@ -45,11 +45,11 @@ const  ChatInterface: React.FC<ChatInterfaceProps> = ({ plantInfo, initialMessag
     <div className="w-full max-w-xl bg-gradient-to-r from-green-200 via-white to-blue-200 dark:from-gray-700 dark:via-gray-800 dark:to-gray-900 rounded-2xl shadow-xl overflow-hidden">
       {/* Chat Window */}
       <div className="h-96 overflow-y-auto p-6 bg-white dark:bg-gray-800">
-        {messages.map((message, index) => (
+        {/* {messages.map((message, index) => (
         <div key={index} className={`message ${message.role}`}>
           {message.content}
         </div>
-      ))}
+        ))} */}
         {messages.length === 0 && (
           <p className="text-center text-gray-500 dark:text-gray-400">
             Start a conversation about your plant 🌱
