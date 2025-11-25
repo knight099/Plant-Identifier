@@ -8,7 +8,7 @@ const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
 export async function identifyPlant(base64Image: string) {
   try {
     // Updated to use gemini-1.5-flash model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Remove the data URL prefix (e.g., 'data:image/jpeg;base64,')
     const imageData = base64Image.replace(/^data:image\/\w+;base64,/, '');
@@ -51,10 +51,10 @@ export async function identifyPlant(base64Image: string) {
       const plantData = JSON.parse(cleanedText);
       console.debug('Plant Data:', plantData);
       return {
-            name: plantData.name || 'Unknown Plant',
-            description: plantData.description || 'No description available.',
-            careInstructions: plantData.careInstructions || ['No care instructions provided.'],
-        };
+        name: plantData.name || 'Unknown Plant',
+        description: plantData.description || 'No description available.',
+        careInstructions: plantData.careInstructions || ['No care instructions provided.'],
+      };
     } else {
       console.warn('Response is not JSON. Returning as plain text.');
       return {
@@ -84,23 +84,23 @@ function isJSON(text: string): boolean {
 }
 
 export async function getChatResponse(message: string, plantInfo: any) {
-//   try {
+  //   try {
     // Using gemini-1.5-flash for chat as well for consistency
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
-    const chat = model.startChat({
-      history: [
-        {
-          role: 'user',
-          parts: [{ text: `I have a ${plantInfo.name}. Here's what I know about it: ${plantInfo.description}` }]
-        },
-        {
-          role: 'model',
-          parts: [{ text: "I'll help you with any questions about your plant." }]
-        }
-      ]
-    });
-    try{
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+  const chat = model.startChat({
+    history: [
+      {
+        role: 'user',
+        parts: [{ text: `I have a ${plantInfo.name}. Here's what I know about it: ${plantInfo.description}` }]
+      },
+      {
+        role: 'model',
+        parts: [{ text: "I'll help you with any questions about your plant." }]
+      }
+    ]
+  });
+  try {
     const result = await chat.sendMessage(message);
     const response = await result.response;
     return response.text();
@@ -121,7 +121,7 @@ export async function getChatResponse(message: string, plantInfo: any) {
       console.error('Unexpected error:', error);
       return 'Sorry, an unexpected error occurred.';
     }
-  
+
     function isAxiosError(error: any): error is import('axios').AxiosError {
       return error.isAxiosError === true;
     }
@@ -131,7 +131,7 @@ export async function getChatResponse(message: string, plantInfo: any) {
 // Add a function to search for plants based on user input
 export async function searchPlants(query: string) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const result = await model.generateContent({
       contents: [
@@ -163,8 +163,8 @@ export async function searchPlants(query: string) {
     if (isJSON(cleanedText)) {
       return JSON.parse(cleanedText).plants || [];
     } else {
-    console.warn('Response is not JSON. Returning as plain text.');
-    return {
+      console.warn('Response is not JSON. Returning as plain text.');
+      return {
         name: 'Search Result',
         description: cleanedText,
         image: 'https://via.placeholder.com/400'
