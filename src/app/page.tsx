@@ -246,6 +246,7 @@ export default function Home() {
                   <ChatInterface
                     key={plantInfo.name} // Force reset when plant changes
                     plantInfo={plantInfo}
+                    initialMessage={initialMessage}
                   />
                 </div>
               </div>
