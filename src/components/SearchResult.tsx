@@ -4,6 +4,8 @@ export interface SearchResult {
   name: string;
   description: string;
   image: string;
+  careInstructions?: string[];
+  similarPlants?: { name: string; image: string }[];
 }
 
 interface SearchResultsProps {

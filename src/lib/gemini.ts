@@ -1,19 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/lib/gemini.ts
-import { GoogleGenerativeAI } from '@google/generative-ai';
-// import axios from 'axios';
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
+const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
+
+// Helper to generate dynamic image URL using Pollinations.ai
+function generateImage(prompt: string): string {
+  const encodedPrompt = encodeURIComponent(prompt);
+  return `https://image.pollinations.ai/prompt/${encodedPrompt}`;
+}
 
 export async function identifyPlant(base64Image: string) {
   try {
-    // Updated to use gemini-1.5-flash model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    // Remove the data URL prefix (e.g., 'data:image/jpeg;base64,')
+    // Remove the data URL prefix
     const imageData = base64Image.replace(/^data:image\/\w+;base64,/, '');
 
-    const result = await model.generateContent({
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
       contents: [
         {
           role: 'user',
@@ -23,7 +26,10 @@ export async function identifyPlant(base64Image: string) {
               {
                 "name": "plant name",
                 "description": "brief description of the plant",
-                "careInstructions": ["instruction1", "instruction2", "instruction3"]
+                "careInstructions": ["instruction1", "instruction2", "instruction3"],
+                "similarPlants": [
+                  { "name": "similar plant name", "imagePrompt": "visual description of similar plant" }
+                ]
               }`
             },
             {
@@ -37,30 +43,32 @@ export async function identifyPlant(base64Image: string) {
       ]
     });
 
-    const response = await result.response;
-    const text = await response.text();
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    // console.debug('Raw AI Response:', response);
-    const cleanedText = text
-      .replace(/```json/g, '') // Remove ```json
-      .replace(/```/g, '') // Remove closing ```
-      .trim()
-
-    // Check if the response is JSON
     if (isJSON(cleanedText)) {
       const plantData = JSON.parse(cleanedText);
-      console.debug('Plant Data:', plantData);
+
+      // Generate images for similar plants
+      if (plantData.similarPlants) {
+        plantData.similarPlants = plantData.similarPlants.map((plant: any) => ({
+          name: plant.name,
+          image: generateImage(`${plant.name} plant ${plant.imagePrompt || ''} realistic high quality`)
+        }));
+      }
+
       return {
         name: plantData.name || 'Unknown Plant',
         description: plantData.description || 'No description available.',
         careInstructions: plantData.careInstructions || ['No care instructions provided.'],
+        similarPlants: plantData.similarPlants || [],
       };
     } else {
-      console.warn('Response is not JSON. Returning as plain text.');
       return {
         name: 'Plant Analysis',
         description: text,
-        careInstructions: ['Please refer to the description for more details.']
+        careInstructions: ['Please refer to the description for more details.'],
+        similarPlants: []
       };
     }
   } catch (error) {
@@ -68,7 +76,8 @@ export async function identifyPlant(base64Image: string) {
     return {
       name: 'Error',
       description: 'Unable to identify the plant at this time. Please try again.',
-      careInstructions: ['Please try uploading the image again.']
+      careInstructions: ['Please try uploading the image again.'],
+      similarPlants: []
     };
   }
 }
@@ -84,65 +93,61 @@ function isJSON(text: string): boolean {
 }
 
 export async function getChatResponse(message: string, plantInfo: any) {
-  //   try {
-    // Using gemini-1.5-flash for chat as well for consistency
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-  const chat = model.startChat({
-    history: [
-      {
-        role: 'user',
-        parts: [{ text: `I have a ${plantInfo.name}. Here's what I know about it: ${plantInfo.description}` }]
-      },
-      {
-        role: 'model',
-        parts: [{ text: "I'll help you with any questions about your plant." }]
-      }
-    ]
-  });
   try {
-    const result = await chat.sendMessage(message);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    if (isAxiosError(error) && error.response) {
-      // Server responded with a status other than 200 range
-      console.error('Server error:', error.response.status, error.response.data);
-      return `Sorry, there was a server error: ${error.response.status}`;
-    } else if (isAxiosError(error) && error.request) {
-      // Request was made but no response was received
-      console.error('Network error:', error.request);
-      return 'Sorry, there was a network error. Please check your connection and try again.';
-    } else if (error instanceof Error) {
-      // Something else happened
-      console.error('Error:', error.message);
-      return `Sorry, an error occurred: ${error.message}`;
-    } else {
-      console.error('Unexpected error:', error);
-      return 'Sorry, an unexpected error occurred.';
-    }
+    // Using gemini-2.5-flash for chat
+    // Note: The new SDK chat API might differ slightly, but generateContent works for single turn
+    // For multi-turn chat, we need to maintain history manually or use the chat helper if available
+    // The google-genai SDK has a simpler interface, let's use generateContent with history context for now
 
-    function isAxiosError(error: any): error is import('axios').AxiosError {
-      return error.isAxiosError === true;
-    }
+    const history = [
+      { role: 'user', parts: [{ text: `I have a ${plantInfo.name}. Here's what I know about it: ${plantInfo.description}` }] },
+      { role: 'model', parts: [{ text: "I'll help you with any questions about your plant." }] },
+      { role: 'user', parts: [{ text: message }] }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: history,
+    });
+
+    return response.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+  } catch (error) {
+    console.error('Error getting chat response:', error);
+    return 'Sorry, an error occurred while processing your request.';
   }
 }
 
 // Add a function to search for plants based on user input
 export async function searchPlants(query: string) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    const result = await model.generateContent({
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
       contents: [
         {
           role: 'user',
           parts: [
             {
-              text: `Search for plants based on the following query and return a JSON response with relevant results:
+              text: `Search for plants based on the following query and return a JSON response with relevant results.
+              
+              IMPORTANT: If the query is a general plant type (e.g., 'Rose', 'Fern', 'Cactus'), provide a list of 3-5 popular varieties or types of that plant as separate entries.
+              
+              For each plant, provide:
+              - name (specific variety name if applicable)
+              - description
+              - careInstructions: an array of 3 brief care tips
+              - similarPlants: an array of 2-3 similar plants, each with "name" and "imagePrompt" (a short visual description for image generation)
+              
+              Format:
               {
                 "plants": [
-                  { "name": "plant name", "description": "short description", "image": "image URL" },
+                  { 
+                    "name": "plant name", 
+                    "description": "short description", 
+                    "careInstructions": ["tip 1", "tip 2", "tip 3"],
+                    "similarPlants": [
+                      { "name": "similar plant name", "imagePrompt": "visual description of similar plant" }
+                    ]
+                  }
                 ]
               }
               Query: ${query}`
@@ -152,23 +157,42 @@ export async function searchPlants(query: string) {
       ]
     });
 
-    const response = await result.response;
-    const text = await response.text();
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    const cleanedText = text
-      .replace(/```json/g, '')
-      .replace(/```/g, '')
-      .trim();
-    console.debug('Plant Data:', cleanedText);
     if (isJSON(cleanedText)) {
-      return JSON.parse(cleanedText).plants || [];
+      const data = JSON.parse(cleanedText);
+      const plants = data.plants || [];
+
+      // Enhance plants with generated images
+      const enhancedPlants = plants.map((plant: any) => {
+        // Generate main image
+        const mainImage = generateImage(`${plant.name} plant realistic high quality`);
+
+        // Generate images for similar plants
+        const similarPlantsWithImages = (plant.similarPlants || []).map((similar: any) => ({
+          name: similar.name,
+          image: generateImage(`${similar.name} plant ${similar.imagePrompt || ''} realistic`)
+        }));
+
+        return {
+          ...plant,
+          image: mainImage,
+          similarPlants: similarPlantsWithImages
+        };
+      });
+
+      return enhancedPlants;
     } else {
       console.warn('Response is not JSON. Returning as plain text.');
-      return {
-        name: 'Search Result',
+      // Fallback for non-JSON response
+      return [{
+        name: query,
         description: cleanedText,
-        image: 'https://via.placeholder.com/400'
-      };
+        image: generateImage(`${query} plant realistic`),
+        careInstructions: [],
+        similarPlants: []
+      }];
     }
   } catch (error) {
     console.error('Error searching plants:', error);

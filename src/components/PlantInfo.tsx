@@ -6,6 +6,7 @@ interface PlantInfoProps {
     description: string;
     careInstructions: string[];
     image?: string; // Optional to allow for cases without an image
+    similarPlants?: { name: string; image: string }[];
   };
 }
 
@@ -41,7 +42,7 @@ export default function PlantInfo({ info }: PlantInfoProps) {
       </h3>
 
       {/* Care Instructions List */}
-      <ul className="list-inside list-disc space-y-2">
+      <ul className="list-inside list-disc space-y-2 mb-8">
         {info.careInstructions.map((instruction, index) => (
           <li
             key={index}
@@ -51,6 +52,33 @@ export default function PlantInfo({ info }: PlantInfoProps) {
           </li>
         ))}
       </ul>
+
+      {/* Similar Plants Section */}
+      {info.similarPlants && info.similarPlants.length > 0 && (
+        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-2xl font-bold text-green-700 dark:text-green-300 mb-4">
+            Similar Plants 🌿
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {info.similarPlants.map((plant, index) => (
+              <div key={index} className="flex flex-col items-center group">
+                <div className="relative w-full aspect-square mb-2 overflow-hidden rounded-xl shadow-md">
+                  <Image
+                    src={plant.image}
+                    alt={plant.name}
+                    fill
+                    className="object-cover transform transition-transform duration-300 group-hover:scale-110"
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                  />
+                </div>
+                <p className="text-sm font-medium text-center text-gray-800 dark:text-gray-200">
+                  {plant.name}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

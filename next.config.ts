@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
         hostname: 'www.gardeners.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'image.pollinations.ai',
+        pathname: '/**',
+      },
     ],
   },
 };
